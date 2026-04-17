@@ -1,49 +1,52 @@
-`default_nettype none
-`timescale 1ns / 1ps
+`timescale 1ns/1ps
 
-/* This testbench just instantiates the module and makes some convenient wires
-   that can be driven / tested by the cocotb test.py.
-*/
-module tb ();
+module tb_tt_um_rca4;
 
-  // Dump the signals to a FST file. You can view it with gtkwave or surfer.
-  initial begin
-    $dumpfile("tb.fst");
-    $dumpvars(0, tb);
-    #1;
-  end
+    reg  [7:0] ui_in;
+    wire [7:0] uo_out;
+    reg clk = 0;
 
-  // Wire up the inputs and outputs:
-  reg clk;
-  reg rst_n;
-  reg ena;
-  reg [7:0] ui_in;
-  reg [7:0] uio_in;
-  wire [7:0] uo_out;
-  wire [7:0] uio_out;
-  wire [7:0] uio_oe;
-`ifdef GL_TEST
-  wire VPWR = 1'b1;
-  wire VGND = 1'b0;
-`endif
+    integer file;
 
-  // Replace tt_um_example with your module name:
-  tt_um_example user_project (
+    tt_um_rca4 dut (
+        .ui_in(ui_in),
+        .uo_out(uo_out),
+        .uio_in(0),
+        .uio_out(),
+        .uio_oe(),
+        .clk(clk),
+        .rst_n(1)
+    );
 
-      // Include power ports for the Gate Level test:
-`ifdef GL_TEST
-      .VPWR(VPWR),
-      .VGND(VGND),
-`endif
+    always #5 clk = ~clk;
 
-      .ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-      .uio_in (uio_in),   // IOs: Input path
-      .uio_out(uio_out),  // IOs: Output path
-      .uio_oe (uio_oe),   // IOs: Enable path (active high: 0=input, 1=output)
-      .ena    (ena),      // enable - goes high when design is selected
-      .clk    (clk),      // clock
-      .rst_n  (rst_n)     // not reset
-  );
+    initial begin
+        $dumpfile("test/tb.vcd");
+        $dumpvars(0, tb_tt_um_rca4);
+
+        file = $fopen("test/results.xml", "w");
+        $fdisplay(file, "<testsuite>");
+
+        // Test 1
+        ui_in = 8'b00100011;
+        #10;
+        if (uo_out[3:0] == 4'b0101)
+            $fdisplay(file, "<testcase name='test1'/>");
+        else
+            $fdisplay(file, "<failure/>");
+
+        // Test 2
+        ui_in = 8'b10000111;
+        #10;
+        if (uo_out[3:0] == 4'b1111)
+            $fdisplay(file, "<testcase name='test2'/>");
+        else
+            $fdisplay(file, "<failure/>");
+
+        $fdisplay(file, "</testsuite>");
+        $fclose(file);
+
+        $finish;
+    end
 
 endmodule
